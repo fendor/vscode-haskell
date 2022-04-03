@@ -1,6 +1,6 @@
 on:
   release:
-    types: [created]
+    types: [released, prereleased]
 
 name: Deploy Extension
 jobs:
@@ -11,32 +11,13 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 14
-      - run: yarn install --immutable --immutable-cache --check-cache
-      - name: Publish to Visual Studio Marketplace
-        id: publishToVSMarketplace
-        uses: HaaLeo/publish-vscode-extension@v0
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
-          yarn: true
-      - name: Publish to Open VSX Registry
-        id: publishToOpenVSX
-        continue-on-error: true
-        uses: HaaLeo/publish-vscode-extension@v0
-        with:
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-          yarn: true
-      - name: Upload extension vsix to workflow artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: haskell-${{ github.event.release.tag_name }}.vsix
-          path: ${{ steps.publishToVSMarketplace.outputs.vsixPath }}
-      - name: Upload extension vsix to release assets
-        uses: actions/upload-release-asset@v1.0.2
+      - name: "Is this a pre-release?"
+        if: ${{ github.event.type == 'prereleased' }}
+        run: echo "This is a PRERELEASE!"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.publishToVSMarketplace.outputs.vsixPath }}
-          asset_name: haskell-${{ github.event.release.tag_name }}.vsix
-          asset_content_type: application/vsix
+          PRERELEASE: 1
+      - name: "Is this a release?"
+        if: ${{ github.event.type == 'released' }}
+        run: echo "This is a RELEASE!"
+        env:
+          PRERELEASE: 0
