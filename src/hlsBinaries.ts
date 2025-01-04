@@ -25,10 +25,16 @@ export type Context = {
   logger: Logger;
 };
 
-// On Windows the executable needs to be stored somewhere with an .exe extension
+/**
+ * On Windows the executable needs to be stored somewhere with an .exe extension
+ */
 const exeExt = process.platform === 'win32' ? '.exe' : '';
 
-/** Gets serverExecutablePath and fails if it's not set.
+/**
+ * Gets serverExecutablePath and fails if it's not set.
+ * @param logger Log progress.
+ * @param folder Workspace folder. Used for resolving variables in the `serverExecutablePath`.
+ * @returns Path to an HLS executable binary.
  */
 function findServerExecutable(logger: Logger, folder?: WorkspaceFolder): string {
   const rawExePath = workspace.getConfiguration('haskell').get('serverExecutablePath') as string;
@@ -130,11 +136,11 @@ export async function findHaskellLanguageServer(
     await ghcup.upgrade();
 
     // boring init
-    let latestHLS: string | undefined;
+    let latestHLS: string | undefined | null;
     let latestCabal: string | undefined | null;
     let latestStack: string | undefined | null;
     let recGHC: string | undefined | null = 'recommended';
-    let projectHls: string | undefined;
+    let projectHls: string | undefined | null;
     let projectGhc: string | undefined | null;
 
     // support explicit toolchain config
@@ -252,7 +258,7 @@ export async function findHaskellLanguageServer(
 
     // more download popups
     if (promptBeforeDownloads) {
-      const hlsInstalled = await toolInstalled(ghcup, 'hls', projectHls);
+      const hlsInstalled = projectHls ? await toolInstalled(ghcup, 'hls', projectHls) : undefined;
       const ghcInstalled = projectGhc ? await toolInstalled(ghcup, 'ghc', projectGhc) : undefined;
       const toInstall: InstalledTool[] = [hlsInstalled, ghcInstalled].filter(
         (tool) => tool && !tool.installed,
@@ -290,7 +296,7 @@ export async function findHaskellLanguageServer(
     const hlsBinDir = await ghcup.call(
       [
         'run',
-        ...['--hls', projectHls],
+        ...(latestHLS ? ['--hls', latestHLS] : []),
         ...(latestCabal ? ['--cabal', latestCabal] : []),
         ...(latestStack ? ['--stack', latestStack] : []),
         ...(projectGhc ? ['--ghc', projectGhc] : []),
@@ -308,11 +314,19 @@ export async function findHaskellLanguageServer(
       true,
     );
 
-    return {
-      binaryDirectory: hlsBinDir,
-      location: path.join(hlsBinDir, `haskell-language-server-wrapper${exeExt}`),
-      tag: 'ghcup',
-    };
+    if (projectHls) {
+      return {
+        binaryDirectory: hlsBinDir,
+        location: path.join(hlsBinDir, `haskell-language-server-wrapper${exeExt}`),
+        tag: 'ghcup',
+      };
+    } else {
+      return {
+        binaryDirectory: hlsBinDir,
+        location: findHlsInPath(logger),
+        tag: 'ghcup',
+      };
+    }
   }
 }
 
