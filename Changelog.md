@@ -1,5 +1,10 @@
 # Changelog for vscode-haskell
 
+## 2.8.2
+
+- Add language-haskell extension pack
+  ([#1385](https://github.com/haskell/vscode-haskell/pull/1385)) by @fendor
+
 ## 2.8.1
 
 - Remove language-haskell extension dependency
