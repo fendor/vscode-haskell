@@ -38,6 +38,9 @@
     "onLanguage:cabal"
   ],
   "main": "./dist/extension",
+  "extensionPack": [
+    "haskell.language-haskell"
+  ],
   "contributes": {
     "languages": [
       {
